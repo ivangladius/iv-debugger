@@ -8,4 +8,8 @@
   :serial t
   :depends-on ("str")
   :components ((:file "package")
-               (:file "iv-debugger")))
+               (:file "iv-debugger")
+	       (:file "register")
+	       (:file "syscall-utilities")
+	       (:file "syscall-bindings")
+	       (:file "memory-utilities")))

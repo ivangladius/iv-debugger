@@ -4,7 +4,8 @@
   (:use #:cl)
   (:export
    #:hello-world
-   #:debug-exe))
+   #:debug-exe
+   #:process-info))
 
 
 
