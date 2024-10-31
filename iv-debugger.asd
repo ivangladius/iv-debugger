@@ -2,7 +2,7 @@
 
 (asdf:defsystem #:iv-debugger
   :description "Debugger to hack the planet"
-  :author "Your Name maximilian.filipov@proton.me"
+  :author "Maximilian Ivan Filipov maximilian.filipov@proton.me"
   :license  "MIT"
   :version "0.0.1"
   :serial t
@@ -10,6 +10,6 @@
   :components ((:file "package")
                (:file "iv-debugger")
 	       (:file "register")
-	       (:file "syscall-utilities")
+	       (:file "syscall-wrapper")
 	       (:file "syscall-bindings")
 	       (:file "memory-utilities")))

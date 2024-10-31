@@ -2,10 +2,13 @@
 
 (defstruct process-info
   name
-  pid
-  ppid
+  args
+  child
+  parent
+  parent-parent
   uid
   gid
   stack-size
   signal-sent
   running)
+
