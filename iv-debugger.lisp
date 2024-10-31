@@ -35,11 +35,15 @@
 	    n
 	    (cffi:foreign-string-to-lisp buf :count n :encoding :ascii))
     (sys-waitpid -1 (cffi:null-pointer) 0)
+    (print *process*)
     (cffi:foreign-free buf)))
 )
 
   
 (defun debug-exe (exe args)
+"Spawn child process trough fork(), then pass over the pipes for communication
+ and then let the child process execv. The pipes are needed to transfer the child process
+ stdout to our process pipe with dup2(...) "
   (let* ((*process* (make-process-info
 		     :name exe
 		     :args args
@@ -48,10 +52,8 @@
     (with-unnamed-unix-pipe (read-end write-end)
       (let ((pid (sys-fork)))
 	(cond
-	  ((= pid 0) (let ((*pid* pid))
-		       (child-process exe args read-end write-end))) ;; child-process
-	  ((> pid 0) (let ((*ppid* pid))
-		       (parent-process read-end write-end)))      ;; parent-process
+	  ((= pid 0) (child-process exe args read-end write-end))
+	  ((> pid 0) (parent-process read-end write-end))
 	  (t (format t "error happened: pid = ~a~%" pid)))))))
 
 
