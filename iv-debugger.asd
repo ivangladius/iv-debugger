@@ -6,10 +6,11 @@
   :license  "MIT"
   :version "0.0.1"
   :serial t
-  :depends-on ("str")
+  :depends-on ("str" "cffi")
   :components ((:file "package")
-               (:file "iv-debugger")
 	       (:file "register")
-	       (:file "syscall-wrapper")
+	       (:file "process")
 	       (:file "syscall-bindings")
-	       (:file "memory-utilities")))
+	       (:file "syscall-wrapper")
+	       (:file "memory-utilities")
+               (:file "iv-debugger")))

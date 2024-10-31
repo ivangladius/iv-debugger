@@ -1,12 +1,21 @@
 
+(in-package #:iv-debugger)
 
 (defconstant +ptrace-traceme+ 0)
 (defconstant +wnohang+ 1)
+
+(cffi:defctype pid-t :int)
+(cffi:defctype size-t :unsigned-long)
+(cffi:defctype ssize-t :long)
+
 
 (cffi:defcfun ("ptrace" sys-ptrace) :long
   (request :int) (pid pid-t) (addr :pointer) (data :pointer))
 
 (cffi:defcfun ("fork" sys-fork) pid-t)
+
+(cffi:defcfun ("exit" sys-exit) :void
+  (exit-code :int))
 
 (cffi:defcfun ("pipe" sys-pipe) :int
   (pipefd :pointer))
@@ -29,3 +38,7 @@
 (cffi:defcfun ("getpid" sys-getpid) pid-t)
 
 (cffi:defcfun ("getppid" sys-getppid) pid-t)
+
+(cffi:defcfun ("getpagesize" sys-getpagesize) :int)
+
+

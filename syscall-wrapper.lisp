@@ -1,4 +1,5 @@
 
+(in-package #:iv-debugger)
 
 (defun ptrace-traceme ()
   (sys-ptrace +ptrace-traceme+ 0 (cffi:null-pointer) (cffi:null-pointer)))

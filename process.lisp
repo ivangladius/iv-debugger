@@ -1,5 +1,7 @@
 
 
+(in-package #:iv-debugger)
+
 (defstruct process-info
   name
   args

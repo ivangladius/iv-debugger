@@ -2,10 +2,6 @@
 
 (in-package #:iv-debugger)
 
-(cffi:defctype pid-t :int)
-(cffi:defctype size-t :unsigned-long)
-(cffi:defctype ssize-t :long)
-
 (defvar *process* nil)
 
 (defun child-process (exe args read-end write-end)
@@ -14,6 +10,8 @@
   (sys-dup2 write-end 1)
   (execv exe args)
   
+  ;; execv failed
+  (sys-exit -69)
   ;; (ptrace-traceme)
   
   ;; (print "child")
@@ -34,10 +32,14 @@
     (format t "child process send[~a]: ~%~a~%"
 	    n
 	    (cffi:foreign-string-to-lisp buf :count n :encoding :ascii))
+    (print "waiting....")
+    (force-output)
     (sys-waitpid -1 (cffi:null-pointer) 0)
+    (print "done....")
+    (force-output)
     (print *process*)
     (cffi:foreign-free buf)))
-)
+
 
   
 (defun debug-exe (exe args)
@@ -49,6 +51,7 @@
 		     :args args
 		     :parent (sys-getpid)
 		     :parent-parent (sys-getppid))))
+    (print *process*)
     (with-unnamed-unix-pipe (read-end write-end)
       (let ((pid (sys-fork)))
 	(cond
@@ -56,4 +59,8 @@
 	  ((> pid 0) (parent-process read-end write-end))
 	  (t (format t "error happened: pid = ~a~%" pid)))))))
 
+(defun run-hackme ()
+  (debug-exe "/home/asdf/quicklisp/local-projects/debugger/hackme" '("1234")))
+
+  
 
