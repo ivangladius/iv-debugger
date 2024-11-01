@@ -6,6 +6,10 @@
 (defun ptrace-traceme ()
   (sys-ptrace +ptrace-traceme+ 0 (cffi:null-pointer) (cffi:null-pointer)))
 
+(defun ptrace-getregs (pid &key (addr nil) (data nil))
+
+  (sys-ptrace +ptrace-getregs+ ))
+
 ;; int pipe(int pipefd[2]);
 (defmacro with-unnamed-unix-pipe ((read-end write-end) &body body)
   (let ((pipe-fd (gensym)))
@@ -32,3 +36,10 @@
     (error "waitpid (status): status must be a foreign pointer to a int"))
   (sys-waitpid pid status-obj options)
   status-obj)
+
+(defun child-exited-p (status)
+  (unless (cffi:pointerp status)
+    (error "child-exited-p (status): status must be a foreign pointer to a int"))
+  (let ((status-val (cffi:mem-ref status :int)))
+    (when (wifexited status-val)
+      (wexitstatus status-val))))

@@ -13,11 +13,13 @@
 ;; #define	__WTERMSIG(status)	((status) & 0x7f)
 ;;
 (defun child-process (exe args read-end write-end)
+  (declare (ignore read-end))
+  (declare (ignore write-end))
   (setf (process-info-child *process*) (sys-getpid))
   ;; (sys-close read-end)
   ;; (sys-dup2 write-end 1)
 
-  (ptrace-traceme)
+  ;;(ptrace-traceme)
   (execv exe args)
 
   (sys-exit +error-sys-execv+)
@@ -32,15 +34,9 @@
   ;; (execv exe args))
   )
 
-
-(defun child-exited-p (status)
-  (unless (cffi:pointerp status)
-    (error "child-exited-p (status): status must be a foreign pointer to a int"))
-  (let ((status-val (cffi:mem-ref status :int)))
-    (when (wifexited status-val)
-      (wexitstatus status-val))))
-
 (defun parent-process (read-end write-end)
+  (declare (ignore read-end))
+  (declare (ignore write-end))
   ;; (sys-close write-end)
   ;; (let* ((len 8000)
   ;;        (buf (cffi:foreign-alloc :char :count len))
@@ -50,16 +46,14 @@
   ;;                 (cffi:foreign-string-to-lisp buf :count n :encoding :ascii))
   ;;   (cffi:foreign-free buf))
   ;; (force-format t "waiting....")
-
-  (cffi:with-foreign-object (status-obj :int)
+  (cffi:with-foreign-objects ((status-obj :int)
+                              (regs '(:struct user-regs-struct)))
     (let ((exit-code (child-exited-p (waitpid status-obj))))
-      (when exit-code
-        (force-format t "[+] : child process exited with code: ~a~%"
-                      exit-code))))
+      (if (/= exit-code 0)
+          (force-format t "[-] : child process exited with code: ~a~%"
+                        exit-code)
+          (force-format t "[+] : child process successfully started!"))))
   )
-
-
-
 
 (defun debug-exe (exe args)
   "Spawn child process trough fork(), then pass over the pipes for communication
@@ -80,3 +74,6 @@
 
 (defun run-hackme ()
   (debug-exe "/home/asdf/quicklisp/local-projects/debugger/hackme" '("1234")))
+
+(defun run-chromium ()                  ;
+  (debug-exe "/usr/bin/chromium" '("--new-window")))
