@@ -3,6 +3,8 @@
 (in-package #:iv-debugger)
 
 
+(declaim (optimize (debug 3)))
+
 (defvar *process* nil)
 (defvar +error-sys-execv+ 69)
 
@@ -12,16 +14,13 @@
 ;;
 (defun child-process (exe args read-end write-end)
   (setf (process-info-child *process*) (sys-getpid))
-  (sys-close read-end)
-  (sys-dup2 write-end 1)
-  ;; (when (=
-  (execv exe args)
-  (sys-exit +error-sys-execv+)
-  ;;      -1)
-  ;; (error (format nil "could not execv ~a ~a" exe args)))
+  ;; (sys-close read-end)
+  ;; (sys-dup2 write-end 1)
 
-  ;; execv failed
-  ;; (ptrace-traceme)
+  (ptrace-traceme)
+  (execv exe args)
+
+  (sys-exit +error-sys-execv+)
 
   ;; (print "child")
   ;; (print read-end)
@@ -42,26 +41,22 @@
       (wexitstatus status-val))))
 
 (defun parent-process (read-end write-end)
-  (sys-close write-end)
-  (let* ((len 8000)
-         (buf (cffi:foreign-alloc :char :count len))
-         (n   (sys-read read-end buf len)))
-    (force-format t "child process send[~a]: ~%~a~%"
-                  n
-                  (cffi:foreign-string-to-lisp buf :count n :encoding :ascii))
-    (cffi:foreign-free buf))
-  (force-format t "waiting....")
+  ;; (sys-close write-end)
+  ;; (let* ((len 8000)
+  ;;        (buf (cffi:foreign-alloc :char :count len))
+  ;;        (n   (sys-read read-end buf len)))
+  ;;   (force-format t "child process send[~a]: ~%~a~%"
+  ;;                 n
+  ;;                 (cffi:foreign-string-to-lisp buf :count n :encoding :ascii))
+  ;;   (cffi:foreign-free buf))
+  ;; (force-format t "waiting....")
 
   (cffi:with-foreign-object (status-obj :int)
-    (sys-waitpid -1 status-obj 0)
-    (let ((status (cffi:mem-ref status-obj :int)))
-      (if (wifexited status)
-          (progn
-            (force-format t "[-] : child process exited with code: ~a~%"
-                          (wexitstatus status))
-            (force-format t "[-] : child process exited with code: ~a~%"
-                          (wexitstatus status)
-                          ))))))
+    (let ((exit-code (child-exited-p (waitpid status-obj))))
+      (when exit-code
+        (force-format t "[+] : child process exited with code: ~a~%"
+                      exit-code))))
+  )
 
 
 
@@ -75,7 +70,7 @@
                      :args args
                      :parent (sys-getpid)
                      :parent-parent (sys-getppid))))
-    (println *process*)
+    ;;(println *process*)
     (with-unnamed-unix-pipe (read-end write-end)
       (let ((pid (sys-fork)))
         (cond
