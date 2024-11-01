@@ -33,6 +33,14 @@
   ;; (execv exe args))
   )
 
+
+(defun child-exited-p (status)
+  (unless (cffi:pointerp status)
+    (error "child-exited-p (status): status must be a foreign pointer to a int"))
+  (let ((status-val (cffi:mem-ref status :int)))
+    (when (wifexited status-val)
+      (wexitstatus status-val))))
+
 (defun parent-process (read-end write-end)
   (sys-close write-end)
   (let* ((len 8000)
