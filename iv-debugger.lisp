@@ -44,7 +44,9 @@
 
 (defun debugger-logic (pid status-obj regs)
   (declare (ignore status-obj))
+
   (sleep 1)
+
   (let ((ptrace-retval (ptrace-getregs pid regs)))
     (update-registers regs)
     (force-format t "~%ptrace-getregs~%[errno, retval, rip, rax, parent, child] : ~a ~a ~a ~a ~a ~a~%"
@@ -56,6 +58,7 @@
                   (process-info-child *process*)))
 
   (ptrace-singlestep pid)
+
 
   (when (= (waitpid status-obj :pid pid) -1)
     (error-format "could not singlestep at [rip] : 0x~X" (rip)))
