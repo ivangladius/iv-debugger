@@ -3,9 +3,10 @@
 
 ;; transform c struct after ptrace-getregs to the common lisp struct user-regs
 ;;
-(defvar *register-symbols*
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defparameter *register-symbols*
   '(r15 r14 r13 r12 rbp rbx r11 r10 r9 r8 rax rcx rdx rsi rdi
-    orig-rax rip cs eflags rsp ss fs-base gs-base ds es fs gs))
+    orig-rax rip cs eflags rsp ss fs-base gs-base ds es fs gs)))
 
 ;; generate cffi user-regs-struct definiton
 ;; ---------------------------------
@@ -41,6 +42,7 @@
 ;;               (cffi:foreign-slot-value ,foreign-registers 'user-regs-struct ,reg))))))
 
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defmacro generate-register-getter-and-setter ()
   `(progn
      ,@(loop :for reg :in *register-symbols*
@@ -50,7 +52,7 @@
                `(defun ,reg (&optional value)
                   (if value
                       (setf ,accessor value)
-                      ,accessor))))))
+                      ,accessor)))))))
 
 (generate-register-getter-and-setter)
 

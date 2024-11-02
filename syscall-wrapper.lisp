@@ -6,10 +6,20 @@
 (defun ptrace-traceme ()
   (sys-ptrace +ptrace-traceme+ 0 (cffi:null-pointer) (cffi:null-pointer)))
 
+
 (defun ptrace-getregs (pid regs)
   (unless (cffi:pointerp regs)
     (error "regs must be a cffi pointer to a user-regs-struct"))
-  (sys-ptrace +ptrace-getregs+ (cffi:null-pointer) regs))
+  (sys-ptrace +ptrace-getregs+ pid (cffi:null-pointer) regs))
+
+
+(defun get-errno ()
+  (cffi:mem-ref (cffi:foreign-symbol-pointer "errno") :int))
+
+(defun ptrace-singlestep (pid)
+  (unless (integerp pid)
+    (error "pid must be a integer"))
+  (sys-ptrace +ptrace-singlestep+ pid (cffi:null-pointer) (cffi:null-pointer)))
 
 
 ;; int pipe(int pipefd[2]);
@@ -31,7 +41,7 @@
       (free-argv argv (length args)))))
 
 ;; int execvp(const char *path, char *const argv[]);
-(defun execv (exe args)
+(defun execvp (exe args)
   (let ((argv (make-argv args)))
     (unwind-protect
          (sys-execvp exe argv)

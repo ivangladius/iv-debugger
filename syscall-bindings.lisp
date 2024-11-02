@@ -20,6 +20,11 @@
 (defconstant +ptrace-syscall+    24)
 (defconstant +wnohang+ 1)
 
+(defconstant +esrch+ 3)
+(defconstant +eperm+ 1)
+(defconstant +eio+ 5)
+(defconstant +einval+ 22)
+
 (cffi:defctype pid-t :int)
 (cffi:defctype size-t :unsigned-long)
 (cffi:defctype ssize-t :long)
@@ -29,6 +34,9 @@
   (request :int) (pid pid-t) (addr :pointer) (data :pointer))
 
 (cffi:defcfun ("fork" sys-fork) pid-t)
+
+(cffi:defcfun ("perror" sys-perror) :void
+  (s :string))
 
 (cffi:defcfun ("exit" sys-exit) :void
   (exit-code :int))
@@ -59,5 +67,3 @@
 (cffi:defcfun ("getppid" sys-getppid) pid-t)
 
 (cffi:defcfun ("getpagesize" sys-getpagesize) :int)
-
-

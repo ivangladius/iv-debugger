@@ -1,6 +1,6 @@
 ;; iv-debugger.lisp
 ;;
-;; (main-restart #'run-hackme)
+;; (main-start-or-restart #'run-hackme)
 ;;
 (in-package #:iv-debugger)
 
@@ -18,7 +18,6 @@
 (defun child-process (exe args read-end write-end)
   (declare (ignore read-end))
   (declare (ignore write-end))
-  (setf (process-info-child *process*) (sys-getpid))
   ;; (sys-close read-end)
   ;; (sys-dup2 write-end 1)
 
@@ -38,19 +37,35 @@
   ;; (execv exe args))
   )
 
-(defun printing ()
-  (format nil "[~a] : ~a~%" "rip" (rip)))
+(defun initialize-further-process-info (child-pid)
+  (setf (process-info-child *process*) child-pid)
+  (setf (process-info-running *process*) t))
 
-(defun logic (status-obj regs)
-  (sleep 0.1)
-  (ptrace-getregs regs)
-  (update-registers regs)
-  (force-format t "hello from the other side...~%")
+(defun debugger-logic (pid status-obj regs)
+  (declare (ignore status-obj))
+  (sleep 1)
+  (let ((ptrace-retval (ptrace-getregs pid regs)))
+    (update-registers regs)
+    (force-format t "~%ptrace-getregs~%[errno, retval, rip, rax, parent, child] : ~a ~a ~a ~a ~a ~a~%"
+                  (get-errno)
+                  ptrace-retval
+                  (format nil "0x~X" (rip))
+                  (format nil "0x~X" (rax))
+                  (sys-getpid)
+                  (process-info-child *process*)))
+
+  (ptrace-singlestep pid)
+
+  (when (= (waitpid pid) -1)
+    (error-format "could not singlestep at [rip] : 0x~X" (rip)))
+
   )
 
 (defun parent-process (child-pid read-end write-end)
   (declare (ignore read-end))
   (declare (ignore write-end))
+  (initialize-further-process-info
+   child-pid)
   ;; (sys-close write-end)
   ;; (let* ((len 8000)
   ;;        (buf (cffi:foreign-alloc :char :count len))
@@ -70,10 +85,9 @@
     (wait-for-execv*-sigterm-from-child-with-waitpid status-obj
                                                      :child-pid child-pid)
 
-    (ptrace-getregs)
-    (update-registers regs)
+    ;; execute debugger logic here
     (loop :do (progn
-                (logic)
+                (debugger-logic child-pid status-obj regs)
                 ))
 
     ;; child has stopped
@@ -101,18 +115,18 @@
   "Spawn child process trough fork(), then pass over the pipes for communication
   and then let the child process execv. The pipes are needed to transfer the child process
   stdout to our process pipe with dup2(...) "
-  (let* ((*process* (make-process-info
-                     :name exe
-                     :args args
-                     :parent (sys-getpid)
-                     :parent-parent (sys-getppid))))
-    (println *process*)
-    (with-unnamed-unix-pipe (read-end write-end)
-      (let ((pid (sys-fork)))
-        (cond
-          ((= pid 0) (child-process exe args read-end write-end))
-          ((> pid 0) (parent-process pid read-end write-end))
-          (t (error-format "error happened: pid = ~a~%" pid)))))))
+  (setf *process* (make-process-info
+                   :name exe
+                   :args args
+                   :parent (sys-getpid)
+                   :parent-parent (sys-getppid)))
+  (println *process*)
+  (with-unnamed-unix-pipe (read-end write-end)
+    (let ((pid (sys-fork)))
+      (cond
+        ((= pid 0) (child-process exe args read-end write-end))
+        ((> pid 0) (parent-process pid read-end write-end))
+        (t (error-format "error happened: pid = ~a~%" pid))))))
 
 (defvar *main-thread* nil)
 
@@ -132,7 +146,7 @@
   (main test-function))
 
 (defun run-hackme ()
-  (debug-exe "hackme" '("1234")))
+  (debug-exe "./hackme" '("1234")))
 
 (defun run-chromium ()                  ;
   (debug-exe "chromium" '("--new-window")))
