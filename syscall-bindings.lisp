@@ -32,6 +32,9 @@
 (cffi:defcfun ("execv" sys-execv) :int
   (pathname :string) (argv :pointer))
 
+(cffi:defcfun ("execvp" sys-execvp) :int
+  (pathname :string) (argv :pointer))
+
 (cffi:defcfun ("waitpid" sys-waitpid) pid-t
   (pid pid-t) (status :pointer) (option :int))
 

@@ -7,7 +7,9 @@
   :version "0.0.1"
   :serial t
   :depends-on ("str"
-               "cffi")
+               "cffi"
+               "slynk"
+               "bordeaux-threads")
   :components ((:file "package")
                (:file "general-utilities")
                (:file "process")

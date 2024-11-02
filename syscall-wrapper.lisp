@@ -28,6 +28,13 @@
 	     (sys-execv exe argv)
       (free-argv argv (length args)))))
 
+;; int execvp(const char *path, char *const argv[]);
+(defun execv (exe args)
+  (let ((argv (make-argv args)))
+    (unwind-protect
+	     (sys-execvp exe argv)
+      (free-argv argv (length args)))))
+
 ;; pid_t waitpid(pid_t pid, int *_Nullable wstatus, int options);
 (defun waitpid (status-obj &key (pid -1) (options 0))
   "TODO: import headers where options are defined there must
@@ -35,11 +42,16 @@
   (unless (cffi:pointerp status-obj)
     (error "waitpid (status): status must be a foreign pointer to a int"))
   (sys-waitpid pid status-obj options)
-  status-obj)
+  (cffi:mem-ref status-obj :int))
 
 (defun child-exited-p (status)
   (unless (cffi:pointerp status)
     (error "child-exited-p (status): status must be a foreign pointer to a int"))
   (let ((status-val (cffi:mem-ref status :int)))
-    (when (wifexited status-val)
-      (wexitstatus status-val))))
+    (wifexited status-val)))
+
+(defun wait-for-execv*-sigterm-from-child-with-waitpid (status-obj &key (child-pid -1) (options 0))
+  (let ((status-val (waitpid status-obj :pid child-pid)))
+    (if (and (wifstopped status-val) (= (wstopsig status-val) +sigtrap+))
+        (force-format t "child process stopped! Happy Hacking!~%")
+        (error-format "parent-process: Could not stop child process [~a]." child-pid))))
