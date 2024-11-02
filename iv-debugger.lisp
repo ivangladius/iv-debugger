@@ -21,8 +21,9 @@
   ;; (sys-close read-end)
   ;; (sys-dup2 write-end 1)
 
+  ;; dont use execvp, somehow the process doesn't get stopped in the parent
   (ptrace-traceme)
-  (execvp exe args)
+  (execv exe args)
 
   (force-format t "could not execv process ~a ~a" exe args)
   (sys-exit +error-sys-execv+)
@@ -56,7 +57,7 @@
 
   (ptrace-singlestep pid)
 
-  (when (= (waitpid pid) -1)
+  (when (= (waitpid status-obj :pid pid) -1)
     (error-format "could not singlestep at [rip] : 0x~X" (rip)))
 
   )
@@ -115,6 +116,10 @@
   "Spawn child process trough fork(), then pass over the pipes for communication
   and then let the child process execv. The pipes are needed to transfer the child process
   stdout to our process pipe with dup2(...) "
+
+  (unless (probe-file exe)
+    (error-format "~a executable not found." exe))
+
   (setf *process* (make-process-info
                    :name exe
                    :args args
@@ -146,7 +151,7 @@
   (main test-function))
 
 (defun run-hackme ()
-  (debug-exe "./hackme" '("1234")))
+  (debug-exe "hackme" '("1234")))
 
 (defun run-chromium ()                  ;
   (debug-exe "chromium" '("--new-window")))
