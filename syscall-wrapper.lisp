@@ -6,9 +6,11 @@
 (defun ptrace-traceme ()
   (sys-ptrace +ptrace-traceme+ 0 (cffi:null-pointer) (cffi:null-pointer)))
 
-(defun ptrace-getregs (pid &key (addr nil) (data nil))
+(defun ptrace-getregs (pid regs)
+  (unless (cffi:pointerp regs)
+    (error "regs must be a cffi pointer to a user-regs-struct"))
+  (sys-ptrace +ptrace-getregs+ (cffi:null-pointer) regs))
 
-  (sys-ptrace +ptrace-getregs+ ))
 
 ;; int pipe(int pipefd[2]);
 (defmacro with-unnamed-unix-pipe ((read-end write-end) &body body)
@@ -25,14 +27,14 @@
 (defun execv (exe args)
   (let ((argv (make-argv args)))
     (unwind-protect
-	     (sys-execv exe argv)
+         (sys-execv exe argv)
       (free-argv argv (length args)))))
 
 ;; int execvp(const char *path, char *const argv[]);
 (defun execv (exe args)
   (let ((argv (make-argv args)))
     (unwind-protect
-	     (sys-execvp exe argv)
+         (sys-execvp exe argv)
       (free-argv argv (length args)))))
 
 ;; pid_t waitpid(pid_t pid, int *_Nullable wstatus, int options);

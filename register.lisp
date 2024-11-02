@@ -40,22 +40,7 @@
 ;;        `(setf (,accessor *register*)
 ;;               (cffi:foreign-slot-value ,foreign-registers 'user-regs-struct ,reg))))))
 
-(defmacro update-registers (foreign-registers)
-  `(progn
-     ,@(loop :for reg :in *register-symbols*
-             :collect
-             `(setf (,(intern (format nil "REGISTER-~a" reg) :iv-debugger) *register*)
-                    (cffi:foreign-slot-value ,foreign-registers '(:struct user-regs-struct) ',reg)))))
 
-;; ---------------------------------------------------
-;;;; convinient for the user repl which I will later implement
-;; to get a register value, just use:
-;; (rax) => 7
-;; to set a regster, just use:
-;; (rbx 69) => 69
-;; which sets the slot rbx in *register* to 69
-;; by using (setf (register-rbx *register*) 69) internally
-                                        ;
 (defmacro generate-register-getter-and-setter ()
   `(progn
      ,@(loop :for reg :in *register-symbols*
@@ -69,7 +54,19 @@
 
 (generate-register-getter-and-setter)
 
-(defmacro do-regs (reg registers &body body)
-  `(loop :for ,reg :in ,registers
-         :do (progn
-               ,@body)
+(defmacro update-registers (foreign-registers)
+  `(progn
+     ,@(loop :for reg :in *register-symbols*
+             :collect
+             `(,reg (cffi:foreign-slot-value ,foreign-registers '(:struct user-regs-struct) ',reg)))))
+
+
+;; ---------------------------------------------------
+;;;; convinient for the user repl which I will later implement
+;; to get a register value, just use:
+;; (rax) => 7
+;; to set a regster, just use:
+;; (rbx 69) => 69
+;; which sets the slot rbx in *register* to 69
+;; by using (setf (register-rbx *register*) 69) internally
+                                        ;
