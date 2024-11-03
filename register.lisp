@@ -88,7 +88,6 @@
     `(progn
        ,@(loop :for reg :in *registers-symbols*
                :for accessor :in *registers-accessors*
-
                :collect
                `(defun ,reg (&key value (registers (car *current-registers*) registers-supplied-p))
                   (if (and registers-supplied-p (null registers))
