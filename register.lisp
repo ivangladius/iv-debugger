@@ -131,16 +131,18 @@
 
 (defun registers-all-rax ()
   (terpri)
-  (let ((x 0))
-    (format t "[~a] : " (length *previous-registers*))
-    (dolist (r *previous-registers*)
-      (format t "~a " (registers-rax r)))
-    (terpri)
-    (format t "~a~%" (registers-rax (car *current-registers*)))
-    (format t "[~a] : " (length *next-registers*))
-    (dolist (r *next-registers*)
-      (format t "~a " (registers-rax r)))
-    (terpri))))
+  (format t "[~a] : " (length *previous-registers*))
+  (dolist (r *previous-registers*)
+    (format t "~a " (registers-rax r)))
+  (terpri)
+  (format t "[~a] : ~a~%" (length *current-registers*) (registers-rax (car *current-registers*)))
+  (format t "[~a] : " (length *next-registers*))
+  (dolist (r *next-registers*)
+    (format t "~a " (registers-rax r)))
+  (terpri)))
+
+(dotimes (i 10)
+  (registers-previous))
 
 (defun registers-current ()
   (car *current-registers*))
@@ -158,9 +160,11 @@
     (copy-foreign-regs-to-cl foreign-registers temporary-registers)
     (if (null *current-registers*)
         (push temporary-registers *current-registers* )
-        (progn
-          (push (pop *current-registers*) *previous-registers*)
-          (push temporary-registers *current-registers* )))))
+        (if (not (null *next-registers*))
+            (registers-next)
+            (progn
+              (push (pop *current-registers*) *previous-registers*)
+              (push temporary-registers *current-registers* ))))))
 
 
 ;; ---------------------------------------------------
