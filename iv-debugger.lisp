@@ -48,7 +48,9 @@
   (sleep 1)
 
   (let ((ptrace-retval (ptrace-getregs pid regs)))
-    (update-registers regs)
+    (foreign-to-cl-registers regs)
+    ;;(cl-registers-to-foreign regs)
+    (registers-push regs)
     (force-format t "~%ptrace-getregs~%[errno, retval, rip, rax, parent, child] : ~a ~a ~a ~a ~a ~a~%"
                   (get-errno)
                   ptrace-retval
@@ -82,7 +84,7 @@
   ;;
   ;; (slynk:create-server :port 4005)
   (cffi:with-foreign-objects ((status-obj :int)
-                              (regs '(:struct user-regs-struct)))
+                              (regs `'(:struct ,registers-struct-name)))
 
     ;; when child executes execv* , sigtrap gets signaled to the
     ;; parent process, we wait for that, else execv* wasn't successful

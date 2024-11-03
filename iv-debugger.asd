@@ -19,4 +19,5 @@
                (:file "shared-libs/bindings")
                (:file "shared-libs/wrapper")
                (:file "register")
+               (:file "commands")
                (:file "iv-debugger")))

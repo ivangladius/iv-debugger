@@ -4,7 +4,28 @@
 ;;
 ;; ;; create list of registers and push new ones, so we can compare
 ;; if registers have changed and also time travel, like rr
-(defvar *registers-history* '())
+;;
+;; let A, B, C .... G be registers struct object
+;; '(A C D)   D   '(E F G)
+;; prev  ->  curr -> next
+;; we can travel backward by pushing curr into next and popping prev into curr
+;; the same way forward by pushing curr into prev and poppinng next into curr
+;;
+;;
+(defvar *obtained-registers* (make-registers)
+  "the registers after ptrace-getregs, its just a temporary holder for registers")
+
+(defvar *current-registers* (make-registers)
+  "holds a cl registers struct of type (symbol-value 'register-struct-name)")
+
+(defvar *previous-registers* '()
+  "holds a list of previous registers struct of type (symbol-value 'register-struct-name")
+
+(defvar *next-registers* '()
+  "holds a list of next registers struct of type (symbol-value 'register-struct-name")
+
+
+
 (defvar cffi-registers-struct-name 'cffi-registers)
 (defvar registers-struct-name 'registers)
 
@@ -41,17 +62,6 @@
 
 
 
-;; -------------------------------------
-
-;; (defun update-registers (foreign-registers)
-;;   (dolist (reg *register-symbols*)
-;;     (let ((accessor (intern (format nil "REGISTER-~a" reg) :iv-debugger)))
-;;       (eval
-;;        `(setf (,accessor *register*)
-;;               (cffi:foreign-slot-value ,foreign-registers 'user-regs-struct ,reg))))))
-
-
-
 
 ;; generate functions to get rax not only from (car *registers-history*) but any register object
 ;;
@@ -74,23 +84,46 @@
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defmacro update-registers (foreign-registers)
+  (defmacro copy-foreign-regs-to-cl (foreign-registers cl-registers)
     `(progn
        ,@(loop :for register-symbol-as-accessor :in *register-symbols*
                :collect
                `(,register-symbol-as-accessor
-                 (cffi:foreign-slot-value ,foreign-registers '(:struct ,cffi-registers-struct-name) ',register-symbol-as-accessor))))))
+                 :value (cffi:foreign-slot-value
+                         ,foreign-registers
+                         '(:struct ,cffi-registers-struct-name)
+                         ',register-symbol-as-accessor)
+                 :registers ,cl-registers)))))
 
 
 
-(defun push-registers-to-history (registers)
+(defun registers-push-to-history (registers)
   (unless (typep registers 'registers)
     (error "parameter register must be of type register"))
   (pushnew registers *registers-history*))
 
-(defun pop-registers-from-history ()
+(defun registers-pop-from-history ()
   (pop *registers-history*))
 
+(defun registers-current ()
+  *current-registers*)
+
+(defun registers-next ()
+  (push (pop *current-registers*) *previous-registers*)
+  (push (pop *next-registers*) *current-registers*))
+
+(defun registers-previous ()
+  (push (pop *current-registers*) *next-registers*)
+  (push (pop *previous-registers*) *current-registers*))
+
+(defun registers-push (foreign-registers)
+  (let ((temporary-registers (make-registers)))
+    (copy-foreign-regs-to-cl foreign-registers temporary-registers)
+    (if (null *current-registers*)
+        (setf *current-registers* temporary-registers)
+        (progn
+          (push (pop *current-registers*) *previous-registers*)
+          (setf *current-registers* temporary-registers)))))
 
 
 ;; ---------------------------------------------------
