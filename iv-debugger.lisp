@@ -49,15 +49,15 @@
     (setf *foreign-registers* regs)
     (let ((ptrace-retval (ptrace-getregs child-pid regs)))
       ;;(cl-registers-to-foreign regs)
-      ;; (print (registers-changed (car *current-registers*) (car *previous-registers*)))
-      (registers-all-rax)
-      (force-format t "~%ptrace-getregs~%[errno, retval, rip, rax, parent, child] : ~a ~a ~a ~a ~a ~a~%"
-                    (get-errno)
-                    ptrace-retval
-                    (format nil "0x~X" (rip))
-                    (format nil "0x~X" (rax))
-                    (sys-getpid)
-                    (process-info-child *process*))
+      (registers-changed-display (registers-changed (car *current-registers*) (car *previous-registers*)))
+      ;; (registers-all-rax)
+      ;; (force-format t "~%ptrace-getregs~%[errno, retval, rip, rax, parent, child] : ~a ~a ~a ~a ~a ~a~%"
+      ;;               (get-errno)
+      ;;               ptrace-retval
+      ;;               (format nil "0x~X" (rip))
+      ;;               (format nil "0x~X" (rax))
+      ;;               (sys-getpid)
+      ;;               (process-info-child *process*))
 
 
       ;;(ptrace-singlestep child-pid)

@@ -118,12 +118,18 @@
 
 
 ;; returns
+;;
+(defun registers-changed-display (changed)
+  (format t "~%changed registers: ~%")
+  (dolist (reg changed)
+    (format t "[~a] = 0x~X~%" (car reg) (cdr reg))))
+
 (defun registers-changed (A B)
   (let ((changed-alist '()))
     (loop :for accessor :in *registers-accessors*
           :for register-symbol :in *registers-symbols*
           :do (progn
-                (if (= (funcall accessor A) (funcall accessor B))
+                (if (/= (funcall accessor A) (funcall accessor B))
                     (push (cons register-symbol (funcall accessor A)) changed-alist))))
     changed-alist))
 
