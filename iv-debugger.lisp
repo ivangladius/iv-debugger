@@ -5,6 +5,7 @@
 (in-package #:iv-debugger)
 
 
+
 (declaim (optimize (speed 0) (space 0) (debug 3)))
 
 (defvar *process* nil)
@@ -42,30 +43,29 @@
   (setf (process-info-child *process*) child-pid)
   (setf (process-info-running *process*) t))
 
-(defun debugger-logic (pid status-obj regs)
-  (declare (ignore status-obj))
-
+(defun debugger-logic (child-pid status-obj)
   (sleep 1)
+  (cffi:with-foreign-object (regs `(:struct ,cffi-registers-struct-name))
+    (setf *foreign-registers* regs)
+    (let ((ptrace-retval (ptrace-getregs child-pid regs)))
+      ;;(cl-registers-to-foreign regs)
+      ;; (print (registers-changed (car *current-registers*) (car *previous-registers*)))
+      (registers-all-rax)
+      (force-format t "~%ptrace-getregs~%[errno, retval, rip, rax, parent, child] : ~a ~a ~a ~a ~a ~a~%"
+                    (get-errno)
+                    ptrace-retval
+                    (format nil "0x~X" (rip))
+                    (format nil "0x~X" (rax))
+                    (sys-getpid)
+                    (process-info-child *process*))
 
-  (let ((ptrace-retval (ptrace-getregs pid regs)))
-    (foreign-to-cl-registers regs)
-    ;;(cl-registers-to-foreign regs)
-    (registers-push regs)
-    (force-format t "~%ptrace-getregs~%[errno, retval, rip, rax, parent, child] : ~a ~a ~a ~a ~a ~a~%"
-                  (get-errno)
-                  ptrace-retval
-                  (format nil "0x~X" (rip))
-                  (format nil "0x~X" (rax))
-                  (sys-getpid)
-                  (process-info-child *process*)))
 
-  (ptrace-singlestep pid)
+      ;;(ptrace-singlestep child-pid)
+      (step-instruction)
 
-
-  (when (= (waitpid status-obj :pid pid) -1)
-    (error-format "could not singlestep at [rip] : 0x~X" (rip)))
-
-  )
+      (when (= (waitpid status-obj :pid child-pid) -1)
+        (error-format "could not singlestep at [rip] : 0x~X" (rip))))
+    ))
 
 (defun parent-process (child-pid read-end write-end)
   (declare (ignore read-end))
@@ -83,8 +83,7 @@
   ;; (force-format t "waiting....")
   ;;
   ;; (slynk:create-server :port 4005)
-  (cffi:with-foreign-objects ((status-obj :int)
-                              (regs `'(:struct ,registers-struct-name)))
+  (cffi:with-foreign-object (status-obj :int)
 
     ;; when child executes execv* , sigtrap gets signaled to the
     ;; parent process, we wait for that, else execv* wasn't successful
@@ -93,7 +92,7 @@
 
     ;; execute debugger logic here
     (loop :do (progn
-                (debugger-logic child-pid status-obj regs)
+                (debugger-logic child-pid status-obj)
                 ))
 
     ;; child has stopped
