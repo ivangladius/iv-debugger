@@ -24,55 +24,52 @@
 (defvar *next-registers* '()
   "holds a list of next registers struct of type (symbol-value 'register-struct-name")
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar cffi-registers-struct-name 'cffi-reegisters))
 
-
-(defvar cffi-registers-struct-name 'cffi-registers)
-(defvar registers-struct-name 'registers)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar registers-struct-name 'registers))
 
 ;;
-(eval-when (:compile-toplevel :load-toplevel :execute)
+(eval-when (:compile-toplevel :execute)
   (defparameter *registers-symbols*
     '(r15 r14 r13 r12 rbp rbx r11 r10 r9 r8 rax rcx rdx rsi rdi
       orig-rax rip cs eflags rsp ss fs-base gs-base ds es fs gs)))
 
+
 ;; generate cffi user-regs-struct definiton
 ;; ---------------------------------
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defmacro generate-cffi-user-regs-struct (name register-size)
-    `(cffi:defcstruct ,(symbol-value name)
-       ,@(loop :for reg :in *registers-symbols* :collect
-               `(,reg ,register-size)))))
+(defmacro generate-cffi-user-regs-struct (name register-size)
+  `(cffi:defcstruct ,(symbol-value name)
+     ,@(loop :for reg :in *registers-symbols* :collect
+	     `(,reg ,register-size))))
 
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (generate-cffi-user-regs-struct
-   cffi-registers-struct-name  :uint64))
+
+(generate-cffi-user-regs-struct
+cffi-registers-struct-name  :uint64)
 
 ;; generate Common Lisp user-regs-struct definition to convert
 ;; cffi user-regs-struct to Common Lisp struct for convinience
 ;; so we can later access them with (register-rax *register*) ...
 ;; -----------------------------------------
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defmacro generate-registers (name)
-    `(defstruct ,(symbol-value name)
-       ,@(loop :for reg :in *registers-symbols* :collect reg))))
+(defmacro generate-registers (name)
+`(defstruct ,(symbol-value name)
+   ,@(loop :for reg :in *registers-symbols* :collect reg)))
 
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (generate-registers registers-struct-name))
+(generate-registers registers-struct-name)
 
 
 
 ;; generate accessor functions like (registers-rax) (registers-rip) ....
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defmacro generate-struct-accessor-functions ()
-    `(defvar *registers-accessors*
-       ',(loop :for reg :in *registers-symbols*
-               :collect
-               (intern (format nil "~a-~a" registers-struct-name reg) :iv-debugger)))))
-
+(defmacro generate-struct-accessor-functions ()
+  `(defvar *registers-accessors*
+     ',(loop :for reg :in *registers-symbols*
+	     :collect
+	     (intern (format nil "~a-~a" registers-struct-name reg) :iv-debugger))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (generate-struct-accessor-functions))
@@ -83,35 +80,33 @@
 ;; which eithers gets or sets with the help of the above generated functions like (registers-rax) ...
 ;; or (setf (registers-rip) 111111)
 ;;
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defmacro generate-register-getter-and-setter ()
-    `(progn
-       ,@(loop :for reg :in *registers-symbols*
-               :for accessor :in *registers-accessors*
-               :collect
-               `(defun ,reg (&key value (registers (car *current-registers*) registers-supplied-p))
-                  (if (and registers-supplied-p (null registers))
-                      nil
-                      (if value
-                          (setf (,accessor registers) value)
-                          (,accessor registers))))))))
+(defmacro generate-register-getter-and-setter ()
+`(progn
+   ,@(loop :for reg :in *registers-symbols*
+	   :for accessor :in *registers-accessors*
+	   :collect
+	   `(defun ,reg (&key value (registers (car *current-registers*) registers-supplied-p))
+	      (if (and registers-supplied-p (null registers))
+		  nil
+		  (if value
+		      (setf (,accessor registers) value)
+		      (,accessor registers)))))))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (generate-register-getter-and-setter))
+
+(generate-register-getter-and-setter)
 
 
 ;; copy foreign-object of user_regs_struct to our cl registers struct
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defmacro copy-foreign-regs-to-cl (foreign-registers cl-registers)
-    `(progn
-       ,@(loop :for registers-symbol-as-accessor :in *registers-symbols*
-               :collect
-               `(,registers-symbol-as-accessor
-                 :value (cffi:foreign-slot-value
-                         ,foreign-registers
-                         '(:struct ,cffi-registers-struct-name)
-                         ',registers-symbol-as-accessor)
-                 :registers ,cl-registers)))))
+(defmacro copy-foreign-regs-to-cl (foreign-registers cl-registers)
+`(progn
+   ,@(loop :for registers-symbol-as-accessor :in *registers-symbols*
+	   :collect
+	   `(,registers-symbol-as-accessor
+	     :value (cffi:foreign-slot-value
+		     ,foreign-registers
+		     '(:struct ,cffi-registers-struct-name)
+		     ',registers-symbol-as-accessor)
+	     :registers ,cl-registers))))
 
 ;;(defun registers-intersection (A B))
 
@@ -144,10 +139,7 @@
   (format t "[~a] : " (length *next-registers*))
   (dolist (r *next-registers*)
     (format t "~a " (registers-rax r)))
-  (terpri)))
-
-(dotimes (i 10)
-  (registers-previous))
+  (terpri))
 
 (defun registers-current ()
   (car *current-registers*))
