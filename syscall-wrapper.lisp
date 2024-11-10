@@ -29,15 +29,12 @@
   (sys-ptrace +ptrace-singlestep+ pid (cffi:null-pointer) (cffi:null-pointer)))
 
 ;; stolen from https://github.com/k-stz/cl-ptrace/blob/master/cl-ptrace/cl-ptrace.lisp
-(defun ptrace-successful? (ptrace-return-value &optional (print-errno-description? t))
+(defun ptrace-successful? (ptrace-return-value)
   "Return T if last ptrace call was successful. Optionally print human readable errno description."
   (declare ((unsigned-byte 64) ptrace-return-value))
-  (if (and (= ptrace-return-value #xffffffffffffffff) (/= *errno* 0))
-      (progn
-	(when print-errno-description?
-	  (format t "~a~%" (strerror)))
-	(values nil ptrace-return-value))
-      t))
+  (= ptrace-return-value #xffffffffffffffff))
+      
+
 
 ;; int pipe(int pipefd[2]);
 (defmacro with-unnamed-unix-pipe ((read-end write-end) &body body)
