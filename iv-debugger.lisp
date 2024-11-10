@@ -1,6 +1,7 @@
 ;; iv-debugger.lisp
 ;;
-;; (main-start-or-restart #'run-hackme)
+;; (progn (main-start-or-restart #'run-hackme) (setf *previous-registers* nil))
+;; (kill-main-thread)
 ;;
 (in-package #:iv-debugger)
 
@@ -32,8 +33,7 @@
   ;; (print "child")
   ;; (print read-end)
   ;; (print write-end)
-
-  ;; (sys-close read-end)
+  ;; (sys-close read-end)j
   ;; (sys-dup2 write-end 1)
   ;; (sys-close write-end)
   ;; (execv exe args))
@@ -50,21 +50,25 @@
     (let ((ptrace-retval (ptrace-getregs child-pid regs)))
       ;;(cl-registers-to-foreign regs)
       (registers-changed-display (registers-changed (car *current-registers*) (car *previous-registers*)))
-      ;; (registers-all-rax)
+      ;;(registers-all-rip)
       ;; (force-format t "~%ptrace-getregs~%[errno, retval, rip, rax, parent, child] : ~a ~a ~a ~a ~a ~a~%"
       ;;               (get-errno)
       ;;               ptrace-retval
       ;;               (format nil "0x~X" (rip))
       ;;               (format nil "0x~X" (rax))
       ;;               (sys-getpid)
-      ;;               (process-info-child *process*))
-
-
+      ;;
+   (let ((bytes (instruction-read (rip))))
+	(when bytes
+	  (print (instruction-disasm :bytes bytes))))
+;;      (force-print (instruction-read (rip)))
       ;;(ptrace-singlestep child-pid)
       (step-instruction)
 
-      (when (= (waitpid status-obj :pid child-pid) -1)
-        (error-format "could not singlestep at [rip] : 0x~X" (rip))))
+;;      (when (= (waitpid status-obj :pid child-pid) -1)
+;;        (error-format "could not singlestep at [rip] : 0x~X" (rip)))
+
+      )
     ))
 
 (defun parent-process (child-pid read-end write-end)
@@ -90,7 +94,7 @@
     (wait-for-execv*-sigterm-from-child-with-waitpid status-obj
                                                      :child-pid child-pid)
 
-    ;; execute debugger logic here
+    ;; lexecute debugger logic here
     (loop :do (progn
                 (debugger-logic child-pid status-obj)
                 ))
@@ -121,8 +125,8 @@
   and then let the child process execv. The pipes are needed to transfer the child process
   stdout to our process pipe with dup2(...) "
 
-  (unless (probe-file exe)
-    (error-format "~a executable not found." exe))
+;;  (unless (probe-file exe)
+;;    (error-format "~a executable not found." exe))
 
   (setf *process* (make-process-info
                    :name exe
@@ -148,7 +152,6 @@
 (defun kill-main-thread ()
   (and *main-thread* (bt:thread-alive-p *main-thread*)
        (bt:destroy-thread *main-thread*)))
-
 
 (defun main-start-or-restart (test-function)
   (kill-main-thread)

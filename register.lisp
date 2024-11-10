@@ -31,7 +31,7 @@
   (defvar registers-struct-name 'registers))
 
 ;;
-(eval-when (:compile-toplevel :execute)
+(eval-when (:compile-toplevel :load-toplevel :execute )
   (defparameter *registers-symbols*
     '(r15 r14 r13 r12 rbp rbx r11 r10 r9 r8 rax rcx rdx rsi rdi
       orig-rax rip cs eflags rsp ss fs-base gs-base ds es fs gs)))
@@ -119,27 +119,28 @@ cffi-registers-struct-name  :uint64)
     (format t "[~a] = 0x~X~%" (car reg) (cdr reg))))
 
 (defun registers-changed (A B)
-  (let ((changed-alist '()))
-    (loop :for accessor :in *registers-accessors*
-          :for register-symbol :in *registers-symbols*
-          :do (progn
-                (if (/= (funcall accessor A) (funcall accessor B))
-                    (push (cons register-symbol (funcall accessor A)) changed-alist))))
-    changed-alist))
+  (if (or (null A) (null B))
+      nil
+      (let ((changed-alist '()))
+	(loop :for accessor :in *registers-accessors*
+	      :for register-symbol :in *registers-symbols*
+	      :do (progn
+		    (if (/= (funcall accessor A) (funcall accessor B))
+			(push (cons register-symbol (funcall accessor A)) changed-alist))))
+	changed-alist)))
 
-
-
-(defun registers-all-rax ()
-  (terpri)
-  (format t "[~a] : " (length *previous-registers*))
-  (dolist (r *previous-registers*)
-    (format t "~a " (registers-rax r)))
-  (terpri)
-  (format t "[~a] : ~a~%" (length *current-registers*) (registers-rax (car *current-registers*)))
-  (format t "[~a] : " (length *next-registers*))
-  (dolist (r *next-registers*)
-    (format t "~a " (registers-rax r)))
-  (terpri))
+(defun registers-all-rip ()
+  (when *current-registers*
+    (terpri)
+    (format t "[~a] : " (length *previous-registers*))
+    (dolist (r *previous-registers*)
+      (format t "~a " (registers-rip r)))
+    (terpri)
+    (format t "[~a] : ~a~%" (length *current-registers*) (registers-rip (car *current-registers*)))
+    (format t "[~a] : " (length *next-registers*))
+    (dolist (r *next-registers*)
+      (format t "~a " (registers-rip r)))
+    (terpri)))
 
 (defun registers-current ()
   (car *current-registers*))
@@ -153,6 +154,8 @@ cffi-registers-struct-name  :uint64)
   (push (pop *previous-registers*) *current-registers*))
 
 (defun registers-push (foreign-registers)
+  (unless foreign-registers
+    (error "registers-push: foreign-regeisters cannot be nil"))
   (let ((temporary-registers (make-registers)))
     (copy-foreign-regs-to-cl foreign-registers temporary-registers)
     (if (null *current-registers*)

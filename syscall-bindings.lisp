@@ -29,8 +29,10 @@
 (cffi:defctype size-t :unsigned-long)
 (cffi:defctype ssize-t :long)
 
-
-(cffi:defcfun ("ptrace" sys-ptrace) :long
+;; fix bug by https://github.com/k-stz/cl-ptrace/blob/master/cl-ptrace/cl-ptrace.lisp
+;; change return value from long to unsigned-long, even tought its long in the man page
+;; but instead of -1 it returns 0xffffffffffffffff
+(cffi:defcfun ("ptrace" sys-ptrace) :unsigned-long
   (request :int) (pid pid-t) (addr :pointer) (data :pointer))
 
 (cffi:defcfun ("fork" sys-fork) pid-t)

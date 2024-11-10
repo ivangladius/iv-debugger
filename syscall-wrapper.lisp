@@ -12,7 +12,14 @@
     (error "regs must be a cffi pointer to a user-regs-struct"))
   (sys-ptrace +ptrace-getregs+ pid (cffi:null-pointer) regs))
 
-
+(defun ptrace-peekdata (pid address)
+  (unless (integerp pid) (error "pid must be integer"))
+  (unless (integerp address)
+    (error "addresss must be a integer"))
+  (let ((address-pointer (cffi:make-pointer address)))
+    (sys-ptrace +ptrace-peekdata+ pid address-pointer (cffi:null-pointer))))
+    
+    
 (defun get-errno ()
   (cffi:mem-ref (cffi:foreign-symbol-pointer "errno") :int))
 
@@ -21,6 +28,16 @@
     (error "pid must be a integer"))
   (sys-ptrace +ptrace-singlestep+ pid (cffi:null-pointer) (cffi:null-pointer)))
 
+;; stolen from https://github.com/k-stz/cl-ptrace/blob/master/cl-ptrace/cl-ptrace.lisp
+(defun ptrace-successful? (ptrace-return-value &optional (print-errno-description? t))
+  "Return T if last ptrace call was successful. Optionally print human readable errno description."
+  (declare ((unsigned-byte 64) ptrace-return-value))
+  (if (and (= ptrace-return-value #xffffffffffffffff) (/= *errno* 0))
+      (progn
+	(when print-errno-description?
+	  (format t "~a~%" (strerror)))
+	(values nil ptrace-return-value))
+      t))
 
 ;; int pipe(int pipefd[2]);
 (defmacro with-unnamed-unix-pipe ((read-end write-end) &body body)

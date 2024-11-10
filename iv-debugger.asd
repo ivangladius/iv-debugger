@@ -8,6 +8,8 @@
   :serial t
   :depends-on ("str"
                "cffi"
+	       "capstone"
+	       "bit-smasher"
                "slynk"
                "bordeaux-threads")
   :components ((:file "package")
@@ -19,5 +21,8 @@
                (:file "shared-libs/bindings")
                (:file "shared-libs/wrapper")
                (:file "register")
+	       (:file "memory")
+	       (:file "instruction")
                (:file "commands")
                (:file "iv-debugger")))
+
